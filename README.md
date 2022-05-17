@@ -1,5 +1,9 @@
 # Hashicorp Vault using AWS Native
 
+## Note
+
+This is originally forked from [https://github.com/giuliocalzolari/terraform-aws-vault-dynamodb](https://github.com/giuliocalzolari/terraform-aws-vault-dynamodb) and changed to make it work with Terraform > 1.0
+
 ## Overview
 
 [Hashicorp Vault](https://www.vaultproject.io/) is becoming one of the most popular tools for secret management, every company to improve their security but sometimes setting a Vault it requires some time and deep understanding on how to configure it. To make it easy the journey to AWS Cloud and increase the level of security of all application I've decided to create an out-of-the-box solution to configure the AWS infrastructure and setting up Vault in one click.

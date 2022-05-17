@@ -40,47 +40,47 @@ data "aws_iam_policy_document" "kms_key_policy_document" {
     }
   }
 
-  statement {
-    sid    = "Allow use of the key for spot"
-    effect = "Allow"
+  # statement {
+  #   sid    = "Allow use of the key for spot"
+  #   effect = "Allow"
 
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:DescribeKey",
-      "kms:CreateGrant"
-    ]
-    resources = [
-      "*",
-    ]
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"]
-    }
-  }
+  #   actions = [
+  #     "kms:Encrypt",
+  #     "kms:Decrypt",
+  #     "kms:ReEncrypt*",
+  #     "kms:GenerateDataKey*",
+  #     "kms:DescribeKey",
+  #     "kms:CreateGrant"
+  #   ]
+  #   resources = [
+  #     "*",
+  #   ]
+  #   principals {
+  #     type        = "AWS"
+  #     identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"]
+  #   }
+  # }
 
-  statement {
-    sid    = "Allow use of the key for backup"
-    effect = "Allow"
+  # statement {
+  #   sid    = "Allow use of the key for backup"
+  #   effect = "Allow"
 
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:DescribeKey",
-      "kms:CreateGrant"
-    ]
-    resources = [
-      "*",
-    ]
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/service-role/BackupServiceRole"]
-    }
-  }
+  #   actions = [
+  #     "kms:Encrypt",
+  #     "kms:Decrypt",
+  #     "kms:ReEncrypt*",
+  #     "kms:GenerateDataKey*",
+  #     "kms:DescribeKey",
+  #     "kms:CreateGrant"
+  #   ]
+  #   resources = [
+  #     "*",
+  #   ]
+  #   principals {
+  #     type        = "AWS"
+  #     identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/service-role/BackupServiceRole"]
+  #   }
+  # }
 
   statement {
     sid    = "Allow use of the key for logs"
@@ -101,6 +101,7 @@ data "aws_iam_policy_document" "kms_key_policy_document" {
       identifiers = ["logs.${var.aws_region}.amazonaws.com"]
     }
   }
+
 
   statement {
     sid    = "Allow attachment of persistent resources"
@@ -151,7 +152,7 @@ resource "aws_cloudwatch_log_group" "logs" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-log"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-log"}),
   )
 }
 
@@ -160,6 +161,7 @@ resource "aws_ssm_parameter" "root_token" {
   type   = "SecureString"
   value  = "init"
   key_id = local.kms_key_id
+  overwrite = true
   lifecycle {
     ignore_changes = [
       value

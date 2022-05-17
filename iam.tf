@@ -10,7 +10,7 @@ resource "aws_iam_role" "ec2_instance" {
   assume_role_policy = data.aws_iam_policy_document.ec2_instance.json
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-ec2-role")
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-ec2-role"})
   )
 }
 

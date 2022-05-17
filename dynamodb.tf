@@ -22,7 +22,7 @@ resource "aws_dynamodb_table" "dynamodb_table" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-dynamodb"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-dynamodb"}),
   )
 }
 
@@ -61,7 +61,7 @@ resource "aws_backup_vault" "backup_vault" {
   kms_key_arn = data.aws_kms_key.by_id.arn
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-dynamodb-vault"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-dynamodb-vault"}),
   )
 }
 

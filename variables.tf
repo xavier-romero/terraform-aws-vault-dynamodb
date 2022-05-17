@@ -8,6 +8,12 @@ variable "vpc_id" {
   description = "VPC Id"
 }
 
+variable "project" {
+  default     = "myproject"
+  type        = string
+  description = "Project Name (e.g. MyProject, etc..)"
+}
+
 variable "environment" {
   default     = "dev"
   type        = string
@@ -40,9 +46,9 @@ variable "key_name" {
 }
 
 variable "arch" {
-  default     = "arm64"
+  default     = "x86_64"
   type        = string
-  description = "EC2 Architecture arm64/x86_64 (arm64 is suggested)"
+  description = "EC2 Architecture arm64/x86_64"
 }
 
 variable "vault_version" {

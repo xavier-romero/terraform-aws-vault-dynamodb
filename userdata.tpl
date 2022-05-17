@@ -50,6 +50,7 @@ if [[ ! -z $${YUM} ]]; then
   echo "Setting up user vault for amazon_linux"
   user_rhel "vault" "vault" "/etc/vault" "Hashicorp vault user"
 
+  yum update -y
   yum install jq -y
   curl -s https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/${arch_version}/latest/amazon-cloudwatch-agent.rpm --output /tmp/amazon-cloudwatch-agent.rpm
   rpm -U /tmp/amazon-cloudwatch-agent.rpm
@@ -58,6 +59,7 @@ elif [[ ! -z $${APT_GET} ]]; then
   echo "Setting up user vault for Debian/Ubuntu"
   user_ubuntu "vault" "vault" "/etc/vault" "Hashicorp vault user"
 
+  apt-get update -y
   apt-get install jq -y
   curl -s https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/${arch_version}/latest/amazon-cloudwatch-agent.deb --output /tmp/amazon-cloudwatch-agent.deb
   dpkg -i -E /tmp/amazon-cloudwatch-agent.deb
@@ -203,8 +205,8 @@ seal "awskms" {
   region     = "${aws_region}"
   kms_key_id = "${kms_key}"
 }
-api_addr = "https://127.0.0.1:8200"
-cluster_addr = "https://127.0.0.1:8201"
+api_addr = "https://0.0.0.0:8200"
+cluster_addr = "https://0.0.0.0:8201"
 ui=true
 
 EOF
@@ -215,7 +217,7 @@ touch /var/log/vault_audit.log
 chown vault:vault /var/log/vault_audit.log
 
 cat << EOF > /etc/profile.d/vault.sh
-export VAULT_ADDR=https://127.0.0.1:8200
+export VAULT_ADDR=https://0.0.0.0:8200
 export VAULT_SKIP_VERIFY=true
 EOF
 systemctl daemon-reload
@@ -223,7 +225,8 @@ systemctl enable vault
 systemctl start vault
 
 
-export VAULT_ADDR=https://127.0.0.1:8200
+# export VAULT_ADDR=https://127.0.0.1:8200
+export VAULT_ADDR=https://0.0.0.0:8200
 export VAULT_SKIP_VERIFY=true
 echo "waiting vault boot"
 waitforurl https://127.0.0.1:8200/v1/sys/seal-status
@@ -238,6 +241,8 @@ then
   STATUS2=$(vault status -format=json )
   if [ "$(echo $STATUS2 | jq .sealed)" == "false" ]
   then
+    vault login $ROOT_TOKEN
+    vault secrets enable -path=secret/ kv-v2
     echo "vault setup completed"
 
     export VAULT_TOKEN=$ROOT_TOKEN
@@ -250,14 +255,14 @@ path "*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 EOF
-      echo "Creating Admin Policy"
-      vault policy write admin /tmp/admin.hcl
-      echo "Enabling userpass"
-      vault auth enable userpass
-      echo "setting admin user"
+      # echo "Creating Admin Policy"
+      # vault policy write admin /tmp/admin.hcl
+      # echo "Enabling userpass"
+      # vault auth enable userpass
+      # echo "setting admin user"
       PASS=$(openssl rand -base64 18)
-      echo "setting vault root username and passwd"
-      vault write auth/userpass/users/root password="$PASS" policies=admin,default
+      # echo "setting vault root username and passwd"
+      # vault write auth/userpass/users/root password="$PASS" policies=admin,default
 
       echo "Saving root token on ssm:///${app_name}/${environment}/root/token"
       aws ssm put-parameter --name '/${app_name}/${environment}/root/token' --value "$ROOT_TOKEN" --type SecureString --region ${aws_region} --overwrite > /dev/null 2>&1

@@ -39,3 +39,8 @@ output "root_token_arn" {
   description = "SSM vault root token ARN"
   value       = aws_ssm_parameter.root_token.arn
 }
+
+output "root_token_param_name" {
+  description = "SSM vault root token parameter name"
+  value       = aws_ssm_parameter.root_token.name
+}

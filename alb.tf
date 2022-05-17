@@ -9,16 +9,17 @@ resource "aws_alb" "main" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-alb"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-alb"}),
   )
 
 }
 
-resource "aws_alb_listener" "main" {
+resource "aws_alb_listener" "https" {
 
   load_balancer_arn = aws_alb.main.id
-  port              = 443
+  port              = "443"
   protocol          = "HTTPS"
+
   certificate_arn   = aws_acm_certificate_validation.vault.certificate_arn
   ssl_policy        = var.alb_ssl_policy
 
@@ -30,7 +31,8 @@ resource "aws_alb_listener" "main" {
 
 
 
-resource "aws_alb_listener" "redirect_http_to_https" {
+resource "aws_alb_listener" "http" {
+
   load_balancer_arn = aws_alb.main.id
   port              = "80"
   protocol          = "HTTP"
@@ -78,7 +80,7 @@ resource "aws_alb_target_group" "main" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-tg"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-tg"}),
   )
 
 }

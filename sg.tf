@@ -9,7 +9,7 @@ resource "aws_security_group" "alb_sg" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-alb-sg")
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-alb-sg"})
   )
 }
 
@@ -52,7 +52,7 @@ resource "aws_security_group" "ec2" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-sg"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-sg"}),
   )
 }
 
@@ -65,7 +65,6 @@ resource "aws_security_group_rule" "asg_vault_rule" {
   source_security_group_id = aws_security_group.alb_sg.id
   security_group_id        = aws_security_group.ec2.id
 }
-
 
 resource "aws_security_group_rule" "asg_egress_rule" {
   type              = "egress"

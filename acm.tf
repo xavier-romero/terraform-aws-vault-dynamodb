@@ -3,7 +3,6 @@ data "aws_route53_zone" "zone" {
   private_zone = false
 }
 
-
 resource "aws_acm_certificate" "vault" {
   domain_name       = "${var.prefix}${var.app_name}${var.suffix}.${var.zone_name}"
   validation_method = "DNS"
@@ -14,14 +13,13 @@ resource "aws_acm_certificate" "vault" {
 
   tags = merge(
     var.extra_tags,
-    map("Name", "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-acm"),
+    tomap({Name = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-acm"}),
   )
 
   options {
     certificate_transparency_logging_preference = "ENABLED"
   }
 }
-
 
 resource "aws_route53_record" "validation" {
   for_each = {
@@ -39,7 +37,6 @@ resource "aws_route53_record" "validation" {
   type            = each.value.type
   zone_id         = data.aws_route53_zone.zone.zone_id
 }
-
 
 resource "aws_acm_certificate_validation" "vault" {
   certificate_arn         = aws_acm_certificate.vault.arn
