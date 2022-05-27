@@ -46,6 +46,9 @@ user_ubuntu() {
   fi
 }
 
+# Found errors due to network unavailable when doing packet install. Let's wait a bit.
+sleep 120
+
 if [[ ! -z $${YUM} ]]; then
   echo "Setting up user vault for amazon_linux"
   user_rhel "vault" "vault" "/etc/vault" "Hashicorp vault user"
