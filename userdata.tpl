@@ -51,7 +51,7 @@ if [[ ! -z $${YUM} ]]; then
   user_rhel "vault" "vault" "/etc/vault" "Hashicorp vault user"
 
   yum update -y
-  yum install jq -y
+  yum install jq git -y
   curl -s https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/${arch_version}/latest/amazon-cloudwatch-agent.rpm --output /tmp/amazon-cloudwatch-agent.rpm
   rpm -U /tmp/amazon-cloudwatch-agent.rpm
 
@@ -60,13 +60,16 @@ elif [[ ! -z $${APT_GET} ]]; then
   user_ubuntu "vault" "vault" "/etc/vault" "Hashicorp vault user"
 
   apt-get update -y
-  apt-get install jq -y
+  apt-get install jq git -y
   curl -s https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/${arch_version}/latest/amazon-cloudwatch-agent.deb --output /tmp/amazon-cloudwatch-agent.deb
   dpkg -i -E /tmp/amazon-cloudwatch-agent.deb
 else
   echo "users not created due to OS detection failure"
   exit 1;
 fi
+
+INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id -s)
+ASG_NAME=$(aws autoscaling describe-auto-scaling-instances --instance-ids $INSTANCE_ID --region eu-west-1 | jq -r .AutoScalingInstances[0].AutoScalingGroupName)
 
 echo "Amazon cloudwatch Agent"
 
@@ -84,19 +87,19 @@ cat << EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
                     {
                         "file_path": "/var/log/vault_audit.log",
                         "log_group_name": "${environment}-${app_name}",
-                        "log_stream_name": "vaultaudit-{instance_id}",
+                        "log_stream_name": "vaultaudit-$INSTANCE_ID",
                         "timezone": "Local"
                     },
                     {
                         "file_path": "/var/log/secure",
                         "log_group_name": "${environment}-${app_name}",
-                        "log_stream_name": "secure-{instance_id}",
+                        "log_stream_name": "secure-$INSTANCE_ID",
                         "timezone": "Local"
                     },
                     {
                         "file_path": "/var/log/messages",
                         "log_group_name": "${environment}-${app_name}",
-                        "log_stream_name": "messages-{instance_id}",
+                        "log_stream_name": "messages-$INSTANCE_ID",
                         "timezone": "Local"
                     }
                 ]
@@ -124,8 +127,8 @@ cat << EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
       }
     },
     "append_dimensions": {
-          "AutoScalingGroupName": "$${!aws:AutoScalingGroupName}",
-          "InstanceId": "$${aws:InstanceId}"
+          "AutoScalingGroupName": "$ASG_NAME",
+          "InstanceId": "$INSTANCE_ID"
     },
     "aggregation_dimensions" : [
             ["AutoScalingGroupName"],
@@ -208,9 +211,11 @@ seal "awskms" {
 api_addr = "https://0.0.0.0:8200"
 cluster_addr = "https://0.0.0.0:8201"
 ui=true
+plugin_directory = "/etc/vault/plugins"
 
 EOF
 
+mkdir /etc/vault/plugins
 chown -R vault:vault /etc/vault
 chmod -R 0644 /etc/vault/*
 touch /var/log/vault_audit.log
@@ -268,6 +273,16 @@ EOF
       aws ssm put-parameter --name '/${app_name}/${environment}/root/token' --value "$ROOT_TOKEN" --type SecureString --region ${aws_region} --overwrite > /dev/null 2>&1
       echo "Saving root password on ssm:///${app_name}/${environment}/root/pass"
       aws ssm put-parameter --name '/${app_name}/${environment}/root/pass'  --value "$PASS"  --type SecureString --region ${aws_region} --overwrite > /dev/null 2>&1
+
+      cd && curl https://dl.google.com/go/go1.18.2.linux-amd64.tar.gz -s -o go.tar.gz
+      rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz
+      export PATH=$PATH:/usr/local/go/bin
+      cd && git clone https://github.com/ConsenSys/quorum-hashicorp-vault-plugin.git
+      cd quorum-hashicorp-vault-plugin && make gobuild
+      MY_SHA256=$(sha256sum build/bin/quorum-hashicorp-vault-plugin | cut -f1 -d' ')
+      mv -f build/bin/quorum-hashicorp-vault-plugin /etc/vault/plugins/
+      chown vault:vault /etc/vault/plugins/quorum-hashicorp-vault-plugin
+      vault plugin register -sha256=$MY_SHA256 secret quorum-hashicorp-vault-plugin
   else
     echo "Error on vault setup"
     echo $STATUS2
