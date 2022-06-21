@@ -127,11 +127,17 @@ data "aws_iam_policy_document" "kms_key_policy_document" {
   }
 }
 
+resource "aws_iam_service_linked_role" "AWSServiceRoleForAutoScaling" {
+  aws_service_name = "autoscaling.amazonaws.com"
+}
 
 resource "aws_kms_key" "key" {
   count       = var.kms_key_id == "" ? 1 : 0
   description = "${var.environment}-${var.prefix}${var.app_name}${var.suffix}-kms"
   policy      = data.aws_iam_policy_document.kms_key_policy_document.json
+  depends_on = [
+    aws_iam_service_linked_role.AWSServiceRoleForAutoScaling
+  ]
 }
 
 resource "aws_kms_alias" "key" {
