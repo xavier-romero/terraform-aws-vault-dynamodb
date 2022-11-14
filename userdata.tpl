@@ -207,22 +207,33 @@ listener "tcp" {
   tls_key_file = "/etc/vault/vault_ssl.key"
 }
 
+listener "tcp" {
+  address = "127.0.0.1:8203"
+  tls_disable = 1
+}
+
 seal "awskms" {
   region     = "${aws_region}"
   kms_key_id = "${kms_key}"
 }
-api_addr = "https://0.0.0.0:8200"
+api_addr = "https://0.0.0.0:8203"
 cluster_addr = "https://0.0.0.0:8201"
 ui=true
 plugin_directory = "/etc/vault/plugins"
 
 EOF
 
+# install iden3 plugin
 mkdir /etc/vault/plugins
+cd /tmp && wget https://github.com/iden3/vault-plugin-secrets-iden3/releases/download/v0.0.6/vault-plugin-secrets-iden3_0.0.6_linux_amd64.tar.gz
+tar -xzf vault-plugin-secrets-iden3_0.0.6_linux_amd64.tar.gz
+mv vault-plugin-secrets-iden3 /etc/vault/plugins/
+
 chown -R vault:vault /etc/vault
 chmod -R 0644 /etc/vault/*
-touch /var/log/vault_audit.log
-chown vault:vault /var/log/vault_audit.log
+chmod +x /etc/vault/plugins
+# touch /var/log/vault_audit.log
+# chown vault:vault /var/log/vault_audit.log
 
 cat << EOF > /etc/profile.d/vault.sh
 export VAULT_ADDR=https://0.0.0.0:8200
@@ -231,7 +242,6 @@ EOF
 systemctl daemon-reload
 systemctl enable vault
 systemctl start vault
-
 
 # export VAULT_ADDR=https://127.0.0.1:8200
 export VAULT_ADDR=https://0.0.0.0:8200
@@ -254,8 +264,13 @@ then
     echo "vault setup completed"
 
     export VAULT_TOKEN=$ROOT_TOKEN
-    echo "Setting Audit file"
-    vault audit enable file file_path=/var/log/vault_audit.log
+    # echo "Setting Audit file"
+    # vault audit enable file file_path=/var/log/vault_audit.log
+    vault audit disable file/
+
+    vault plugin register -sha256=0156a4521508edc5f60fab8c13a6f08dd45668644aaf2d18600e713c3791db14 vault-plugin-secrets-iden3
+    vault plugin reload -plugin=vault-plugin-secrets-iden3
+    vault secrets enable -path=iden3 vault-plugin-secrets-i
 
     cat << EOF > /tmp/admin.hcl
 path "*"
@@ -292,5 +307,5 @@ EOF
   fi
 
 else
-  echo "vault is initialized"
+  echo "vault already initialized"
 fi

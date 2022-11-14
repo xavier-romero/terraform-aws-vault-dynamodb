@@ -52,7 +52,7 @@ variable "arch" {
 }
 
 variable "vault_version" {
-  default     = "1.6.1"
+  default     = "1.12.1"
   type        = string
   description = "Vault version to install"
 }
